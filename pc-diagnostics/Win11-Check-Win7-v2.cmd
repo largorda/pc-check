@@ -1,137 +1,93 @@
 @echo off
-setlocal EnableExtensions
-title Windows 11 Compatibility Check - Windows 7
-set "REPORT=%~dp0report2.txt"
+setlocal EnableExtensions DisableDelayedExpansion
+rem Built-in Windows 7 queries only. No output parsing or temporary files.
+rem ASCII text only, without BOM, with CRLF.
+rem report.txt and the original diagnostic scripts are not modified.
 
-if exist "%REPORT%" (
-  echo.
-  echo report2.txt already exists:
-  echo %REPORT%
-  echo Delete or rename report2.txt, then run this file again.
-  echo.
-  pause
-  exit /b 1
-)
+set "W11_REPORT2=%~dp0report2.txt"
+if exist "%W11_REPORT2%" goto ExistingReport
 
-call :HEAD "Windows 7 - Windows 11 compatibility diagnostic"
-echo Report file: %REPORT%
-echo.
+>>"%W11_REPORT2%" echo Windows 7 hardware diagnostic - raw command output
+if errorlevel 1 goto ReportWriteFailed
+if not exist "%W11_REPORT2%" goto ReportWriteFailed
+>>"%W11_REPORT2%" echo Command output and error messages are recorded without parsing or conversion.
 
-echo [1/9] Windows information
-call :SECTION "WINDOWS"
-systeminfo
-systeminfo >> "%REPORT%" 2>&1
-echo.>>"%REPORT%"
+echo [1/12] Running systeminfo...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [1/12] SYSTEMINFO =====
+"%SystemRoot%\System32\systeminfo.exe" >>"%W11_REPORT2%" 2>&1
 
-echo.
-echo [2/9] CPU
-call :SECTION "CPU"
-wmic cpu get Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors,DataWidth,AddressWidth,Architecture,MaxClockSpeed
-wmic cpu get Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors,DataWidth,AddressWidth,Architecture,MaxClockSpeed 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [2/12] Checking CPU...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [2/12] CPU =====
+"%SystemRoot%\System32\wbem\WMIC.exe" cpu get Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors,DataWidth,MaxClockSpeed >>"%W11_REPORT2%" 2>&1
 
-echo.
-echo [3/9] PC / Mainboard / BIOS
-call :SECTION "PC"
-wmic computersystem get Manufacturer,Model,SystemType,TotalPhysicalMemory
-wmic computersystem get Manufacturer,Model,SystemType,TotalPhysicalMemory 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [3/12] Checking PC and total RAM...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [3/12] PC / TOTAL RAM =====
+"%SystemRoot%\System32\wbem\WMIC.exe" computersystem get Manufacturer,Model,SystemType,TotalPhysicalMemory >>"%W11_REPORT2%" 2>&1
 
-call :SECTION "MAINBOARD"
-wmic baseboard get Manufacturer,Product,Version
-wmic baseboard get Manufacturer,Product,Version 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [4/12] Checking mainboard...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [4/12] MAINBOARD =====
+"%SystemRoot%\System32\wbem\WMIC.exe" baseboard get Manufacturer,Product,Version >>"%W11_REPORT2%" 2>&1
 
-call :SECTION "BIOS"
-wmic bios get Manufacturer,SMBIOSBIOSVersion,ReleaseDate
-wmic bios get Manufacturer,SMBIOSBIOSVersion,ReleaseDate 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [5/12] Checking BIOS...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [5/12] BIOS =====
+"%SystemRoot%\System32\wbem\WMIC.exe" bios get Manufacturer,SMBIOSBIOSVersion,ReleaseDate >>"%W11_REPORT2%" 2>&1
 
-echo.
-echo [4/9] RAM
-call :SECTION "RAM MODULES"
-wmic memorychip get BankLabel,DeviceLocator,Capacity,Manufacturer,PartNumber,Speed
-wmic memorychip get BankLabel,DeviceLocator,Capacity,Manufacturer,PartNumber,Speed 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [6/12] Checking RAM modules...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [6/12] RAM MODULES =====
+"%SystemRoot%\System32\wbem\WMIC.exe" memorychip get BankLabel,DeviceLocator,Capacity,Manufacturer,PartNumber,Speed >>"%W11_REPORT2%" 2>&1
 
-echo.
-echo [5/9] Storage
-call :SECTION "DISK DRIVES"
-wmic diskdrive get Index,Model,Size,InterfaceType,MediaType
-wmic diskdrive get Index,Model,Size,InterfaceType,MediaType 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [7/12] Checking disk drives...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [7/12] DISK DRIVES =====
+"%SystemRoot%\System32\wbem\WMIC.exe" diskdrive get Index,Model,Size,InterfaceType,MediaType >>"%W11_REPORT2%" 2>&1
 
-echo.
-echo [6/9] Partitions / Volumes
-call :SECTION "PARTITIONS"
-wmic partition get DiskIndex,Index,Type,Size,BootPartition
-wmic partition get DiskIndex,Index,Type,Size,BootPartition 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [8/12] Checking partitions...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [8/12] PARTITIONS =====
+"%SystemRoot%\System32\wbem\WMIC.exe" partition get DiskIndex,Index,Type,Size,BootPartition >>"%W11_REPORT2%" 2>&1
 
-call :SECTION "LOCAL VOLUMES"
-wmic logicaldisk where "DriveType=3" get DeviceID,FileSystem,Size,FreeSpace
-wmic logicaldisk where "DriveType=3" get DeviceID,FileSystem,Size,FreeSpace 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [9/12] Checking fixed local volumes...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [9/12] FIXED LOCAL VOLUMES =====
+"%SystemRoot%\System32\wbem\WMIC.exe" logicaldisk where "DriveType=3" get DeviceID,FileSystem,Size,FreeSpace >>"%W11_REPORT2%" 2>&1
 
-echo.
-echo [7/9] Graphics
-call :SECTION "GRAPHICS"
-wmic path Win32_VideoController get Name,AdapterCompatibility,AdapterRAM,DriverVersion
-wmic path Win32_VideoController get Name,AdapterCompatibility,AdapterRAM,DriverVersion 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
+echo [10/12] Checking graphics...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [10/12] GRAPHICS =====
+"%SystemRoot%\System32\wbem\WMIC.exe" path Win32_VideoController get Name,AdapterCompatibility,AdapterRAM,DriverVersion >>"%W11_REPORT2%" 2>&1
+
+echo [11/12] Checking Windows edition and architecture...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [11/12] WINDOWS =====
+"%SystemRoot%\System32\wbem\WMIC.exe" os get Caption,Version,BuildNumber,OSArchitecture,CSDVersion >>"%W11_REPORT2%" 2>&1
+
+echo [12/12] Checking TPM...
+>>"%W11_REPORT2%" echo.
+>>"%W11_REPORT2%" echo ===== [12/12] TPM - OPTIONAL =====
+>>"%W11_REPORT2%" echo A failed TPM query does not prove that TPM is absent or unsupported.
+"%SystemRoot%\System32\wbem\WMIC.exe" /namespace:\\root\cimv2\security\microsofttpm path Win32_Tpm get SpecVersion,ManufacturerId,ManufacturerVersion,IsEnabled_InitialValue,IsActivated_InitialValue >>"%W11_REPORT2%" 2>&1
 
 echo.
-echo [8/9] TPM
-call :SECTION "TPM"
-wmic /namespace:\\root\cimv2\security\microsofttpm path Win32_Tpm get SpecVersion,ManufacturerId,ManufacturerVersion,IsEnabled_InitialValue,IsActivated_InitialValue
-wmic /namespace:\\root\cimv2\security\microsofttpm path Win32_Tpm get SpecVersion,ManufacturerId,ManufacturerVersion,IsEnabled_InitialValue,IsActivated_InitialValue 2>&1 | findstr /r /v "^$" >> "%REPORT%"
-echo.>>"%REPORT%"
-
-echo.
-echo [9/9] Diagnostic notes
-call :SECTION "WINDOWS 11 CHECK NOTES"
-echo CPU official support: compare the exact CPU model with Microsoft's supported CPU list.
-echo TPM requirement: TPM 2.0.
-echo Firmware requirement: UEFI and Secure Boot capable.
-echo RAM requirement: 4 GB or more.
-echo Storage requirement: 64 GB or more.
-echo Graphics requirement: DirectX 12 compatible GPU with WDDM 2.0 driver.
-echo.
-(
-  echo CPU official support: compare the exact CPU model with Microsoft's supported CPU list.
-  echo TPM requirement: TPM 2.0.
-  echo Firmware requirement: UEFI and Secure Boot capable.
-  echo RAM requirement: 4 GB or more.
-  echo Storage requirement: 64 GB or more.
-  echo Graphics requirement: DirectX 12 compatible GPU with WDDM 2.0 driver.
-) >> "%REPORT%"
-
-echo.
-echo ============================================================
-echo COMPLETE - report2.txt was created.
-echo ============================================================
-echo.
-
-echo ---------------- SAVED REPORT CONTENT ----------------
-type "%REPORT%"
-echo ---------------- END OF REPORT ------------------------
-echo.
-
-start "" notepad.exe "%REPORT%"
-echo report2.txt was also opened in Notepad.
-echo.
+echo [Done] Diagnostic commands finished. Review report2.txt for results and errors.
+echo "%W11_REPORT2%"
 pause
 exit /b 0
 
-:HEAD
-> "%REPORT%" echo ============================================================
->>"%REPORT%" echo %~1
->>"%REPORT%" echo ============================================================
->>"%REPORT%" echo.
-exit /b 0
+:ExistingReport
+echo report2.txt already exists. It will not be overwritten or renamed.
+echo Delete the existing report2.txt yourself, then run this script again.
+echo "%W11_REPORT2%"
+pause
+exit /b 1
 
-:SECTION
-echo.
-echo ===== %~1 =====
->>"%REPORT%" echo ===== %~1 =====
-exit /b 0
+:ReportWriteFailed
+echo [Error] Could not create report2.txt in the script folder.
+echo Check folder write permissions and available disk space.
+pause
+exit /b 1
